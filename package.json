@@ -1,7 +1,7 @@
 {
-  "name": "watermark",
-  "version": "1.0.0",
-  "description": "Security watermark for administrative documents — 100% client-side",
+  "name": "pdf-merger",
+  "version": "0.1.0",
+  "description": "Merge PDF files in your browser. 100% local, privacy-first.",
   "type": "module",
   "license": "CC-BY-NC-ND-4.0",
   "scripts": {
@@ -20,8 +20,8 @@
     "test:report": "npx playwright show-report tests/e2e/results/report"
   },
   "dependencies": {
-    "pdf-lib": "1.17.1",
-    "pdfjs-dist": "6.2.108"
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.2.108"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -1,625 +1,504 @@
+/**
+ * PDF Merger — Main Application Logic
+ * 100% client-side, privacy-first. PDFs never leave the browser.
+ *
+ * Stack: pdf-lib (merge), pdfjs-dist (thumbnails/page count)
+ */
+
 import '../styles/main.css';
+import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { getCurrentLanguage, getPresetText, initI18n, t } from './i18n.js';
-import { PRESETS } from './presets.js';
+import { initI18n, setLanguage, getCurrentLanguage, t } from './i18n.js';
 
-// État de l'application
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+// ===== State =====
 const state = {
-  file: null,
-  fileUrl: null,
-  fileBlob: null, // cached Blob for PDF re-renders (reliable, can be read multiple times)
-  previewCanvas: null, // pour images (téléchargement image)
-  previewCanvases: [], // pour PDF (tous les canvases rendus)
-  options: {
-    text: 'Copy for identity verification only\n{date}',
-    position: 'diagonal',
-    opacity: 30,
-    fontSize: 5,
-    color: '#dc2626',
-    rotation: -45,
-  },
+  files: [],         // Array of { id, file, name, size, pageCount, thumbnailUrl }
+  maxFiles: 10,
+  isProcessing: false,
+  nextId: 1,
 };
 
-// Éléments DOM
-const elements = {};
+// ===== DOM refs =====
+let dropzone, fileInput, workspace, fileList, progressContainer,
+    progressFill, progressLabel, btnMerge, btnAddMore, btnResetAll, btnReset,
+    totalPagesCount, fileCountDisplay, srLive;
 
-/**
- * Initialisation de l'application
- */
-async function init() {
-  // Initialize i18n first so all UI text is translated before rendering
+// ===== Init =====
+function init() {
+  // Cache DOM elements
+  dropzone = document.getElementById('dropzone');
+  fileInput = document.getElementById('file-input');
+  workspace = document.getElementById('workspace');
+  fileList = document.getElementById('file-list');
+  progressContainer = document.getElementById('progress-container');
+  progressFill = document.getElementById('progress-fill');
+  progressLabel = document.getElementById('progress-label');
+  btnMerge = document.getElementById('btn-merge');
+  btnAddMore = document.getElementById('btn-add-more');
+  btnResetAll = document.getElementById('btn-reset-all');
+  btnReset = document.getElementById('btn-reset');
+  totalPagesCount = document.getElementById('total-pages-count');
+  fileCountDisplay = document.getElementById('file-count-display');
+  srLive = document.getElementById('sr-live');
+
+  // Initialize i18n
   initI18n();
 
-  cacheElements();
-  renderPresets();
-  bindEvents();
-
-  // Sync initial values from inputs to state
-  // Set default watermark text in the textarea (using i18n preset for current language)
-  const defaultPreset = PRESETS[0];
-  if (defaultPreset) {
-    const localizedText = getPresetText(defaultPreset.id);
-    if (localizedText) {
-      // Substitute {date} with today's date automatically
-      const localeMap = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-PT', nl: 'nl-NL', it: 'it-IT' };
-      const todayStr = new Date().toLocaleDateString(localeMap[getCurrentLanguage()] || 'en-US');
-      const textWithDate = localizedText.replace(/{date}/g, todayStr);
-      elements.watermarkText.value = textWithDate;
-      state.options.text = textWithDate;
-    }
-  }
-  // Set worker path for PDF.js
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-
-  registerServiceWorker();
-  console.log('✅ WaterMark initialized');
-}
-
-/**
- * Mise en cache des éléments DOM
- */
-function cacheElements() {
-  elements.dropzone = document.getElementById('dropzone');
-  elements.fileInput = document.getElementById('file-input');
-  elements.workspace = document.getElementById('workspace');
-  elements.filename = document.getElementById('filename');
-  elements.previewArea = document.getElementById('preview-area');
-  elements.btnDownload = document.getElementById('btn-download');
-  elements.btnReset = document.getElementById('btn-reset');
-
-  elements.watermarkText = document.getElementById('watermark-text');
-
-  elements.opacitySlider = document.getElementById('opacity');
-  elements.opacityValue = document.getElementById('opacity-value');
-  elements.fontSizeSlider = document.getElementById('fontsize');
-  elements.fontSizeValue = document.getElementById('fontsize-value');
-  elements.rotationSlider = document.getElementById('rotation');
-  elements.rotationValue = document.getElementById('rotation-value');
-  elements.colorPicker = document.getElementById('color-picker');
-  elements.positionControl = document.getElementById('position-control');
-  elements.presetsGrid = document.getElementById('presets-grid');
-}
-
-/**
- * Rendu des boutons de presets
- */
-function renderPresets() {
-  const lang = getCurrentLanguage();
-  elements.presetsGrid.innerHTML = PRESETS.map(
-    (preset) => `
-    <button class="preset-btn" data-preset="${preset.id}">
-      <span class="preset-btn__icon">${preset.icon}</span>
-      <span class="preset-btn__label">${preset.label?.[lang] || preset.label?.en || preset.label || preset.id}</span>
-      <span class="preset-btn__hint">${preset.hint?.[lang] || preset.hint?.en || preset.hint || ''}</span>
-    </button>
-  `,
-  ).join('');
-}
-
-/**
- * Liaison des événements
- */
-function bindEvents() {
-  // Dropzone
-  elements.dropzone.addEventListener('click', () => elements.fileInput.click());
-  elements.dropzone.addEventListener('keydown', (e) => {
+  // Dropzone events
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      elements.fileInput.click();
+      fileInput.click();
     }
   });
-  elements.dropzone.addEventListener('dragover', (e) => {
+  dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    elements.dropzone.classList.add('dragover');
+    dropzone.classList.add('dragover');
   });
-  elements.dropzone.addEventListener('dragleave', () => {
-    elements.dropzone.classList.remove('dragover');
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
   });
-  elements.dropzone.addEventListener('drop', handleDrop);
-  elements.fileInput.addEventListener('change', handleFileSelect);
-
-  // Boutons
-  elements.btnDownload.addEventListener('click', handleDownload);
-  elements.btnReset.addEventListener('click', resetApp);
-
-  // Inputs texte
-  elements.watermarkText.addEventListener('input', (e) => {
-    state.options.text = e.target.value;
-    debouncedPreview();
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
   });
 
-  // Sliders
-  elements.opacitySlider.addEventListener('input', (e) => {
-    state.options.opacity = parseInt(e.target.value, 10);
-    elements.opacityValue.textContent = `${e.target.value}%`;
-    debouncedPreview();
-  });
-  elements.fontSizeSlider.addEventListener('input', (e) => {
-    state.options.fontSize = parseInt(e.target.value, 10);
-    elements.fontSizeValue.textContent = `${e.target.value}%`;
-    debouncedPreview();
-  });
-  elements.rotationSlider.addEventListener('input', (e) => {
-    state.options.rotation = parseInt(e.target.value, 10);
-    elements.rotationValue.textContent = `${e.target.value}°`;
-    debouncedPreview();
+  // File input change
+  fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+    fileInput.value = ''; // Reset so same file can be re-selected
   });
 
-  // Sélecteur de couleur
-  elements.colorPicker.querySelectorAll('.color-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      elements.colorPicker.querySelectorAll('.color-btn').forEach((b) => {
-        b.classList.remove('active');
-      });
-      btn.classList.add('active');
-      state.options.color = btn.dataset.color;
-      debouncedPreview();
-    });
-  });
+  // Button events
+  btnMerge.addEventListener('click', mergePDFs);
+  btnAddMore.addEventListener('click', () => fileInput.click());
+  btnResetAll.addEventListener('click', resetAll);
+  if (btnReset) btnReset.addEventListener('click', resetAll);
+}
 
-  // Contrôles de position
-  elements.positionControl.querySelectorAll('.seg-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      elements.positionControl.querySelectorAll('.seg-btn').forEach((b) => {
-        b.classList.remove('active');
-      });
-      btn.classList.add('active');
-      state.options.position = btn.dataset.position;
-      debouncedPreview();
-    });
-  });
+// ===== File Handling =====
 
-  // Presets
-  bindPresetButtons();
+/**
+ * Validate and add files to state.
+ * @param {FileList} fileListInput - Files from input or drop
+ */
+async function handleFiles(fileListInput) {
+  const files = Array.from(fileListInput);
 
-  // Toggle collapsible sections
-  document.querySelectorAll('.control-group__title').forEach((title) => {
-    const toggleSection = () => {
-      const body = title.parentElement.querySelector('.control-group__body');
-      if (!body) return;
-      const expanded = title.getAttribute('aria-expanded') === 'true';
-      title.setAttribute('aria-expanded', String(!expanded));
-      body.classList.toggle('collapsed');
-    };
-    title.addEventListener('click', toggleSection);
-    title.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggleSection();
-      }
-    });
-  });
-
-  // Language change: re-render presets + watermark text
-  document.addEventListener('languagechange', () => {
-    renderPresets();
-    bindPresetButtons();
-    // Update watermark text if a preset is active, otherwise keep custom text
-    const activePreset = elements.presetsGrid.querySelector('.preset-btn.active');
-    if (activePreset) {
-      const preset = PRESETS.find((p) => p.id === activePreset.dataset.preset);
-      if (preset) {
-        const localizedText = getPresetText(preset.id);
-        const localeMap = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-PT', nl: 'nl-NL', it: 'it-IT' };
-        const todayStr = new Date().toLocaleDateString(localeMap[getCurrentLanguage()] || 'en-US');
-        const textWithDate = localizedText.replace(/{date}/g, todayStr);
-        elements.watermarkText.value = textWithDate;
-        state.options.text = textWithDate;
-      }
+  for (const file of files) {
+    // Validate type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showError(t('alerts.invalidType'));
+      continue;
     }
-    // Re-render preview with new locale
-    if (state.file) debouncedPreview();
-  });
+
+    // Validate count
+    if (state.files.length >= state.maxFiles) {
+      showError(t('alerts.maxFiles'));
+      break;
+    }
+
+    // Check duplicate (by name + size)
+    const isDuplicate = state.files.some(
+      (f) => f.name === file.name && f.size === file.size
+    );
+    if (isDuplicate) {
+      showError(t('alerts.duplicate'));
+      continue;
+    }
+
+    // Add file to state
+    const id = state.nextId++;
+    const entry = {
+      id,
+      file,
+      name: file.name,
+      size: file.size,
+      pageCount: 0,
+      thumbnailUrl: null,
+    };
+
+    state.files.push(entry);
+    renderFileList();
+
+    // Async: get page count and thumbnail
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      entry.pageCount = pdfDoc.numPages;
+
+      // Generate thumbnail from page 1
+      const page = await pdfDoc.getPage(1);
+      const viewport = page.getViewport({ scale: 0.4 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      entry.thumbnailUrl = canvas.toDataURL('image/png');
+    } catch (err) {
+      console.warn('Failed to process PDF thumbnail:', err);
+      // Continue without thumbnail
+    }
+
+    renderFileList();
+    updateTotals();
+  }
+
+  // Show workspace if we have files
+  if (state.files.length > 0) {
+    showWorkspace();
+  }
 }
 
 /**
- * Liaison des événements sur les boutons de presets
+ * Render the file list in the DOM.
  */
-function bindPresetButtons() {
-  elements.presetsGrid.querySelectorAll('.preset-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      elements.presetsGrid.querySelectorAll('.preset-btn').forEach((b) => {
-        b.classList.remove('active');
-      });
-      btn.classList.add('active');
-      const preset = PRESETS.find((p) => p.id === btn.dataset.preset);
-      if (preset) {
-        const localizedText = getPresetText(preset.id);
-        const localeMap = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-PT', nl: 'nl-NL', it: 'it-IT' };
-        const todayStr = new Date().toLocaleDateString(localeMap[getCurrentLanguage()] || 'en-US');
-        const textWithDate = localizedText.replace(/{date}/g, todayStr);
-        elements.watermarkText.value = textWithDate;
-        state.options.text = textWithDate;
-        debouncedPreview();
+function renderFileList() {
+  fileList.innerHTML = '';
+
+  state.files.forEach((entry, index) => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('data-id', String(entry.id));
+    card.setAttribute('draggable', 'true');
+
+    // Order number
+    const order = document.createElement('div');
+    order.className = 'file-card__order';
+    order.textContent = String(index + 1);
+
+    // Thumbnail
+    const thumb = document.createElement('div');
+    thumb.className = 'file-card__thumb';
+    if (entry.thumbnailUrl) {
+      const img = document.createElement('img');
+      img.src = entry.thumbnailUrl;
+      img.alt = '';
+      thumb.appendChild(img);
+    } else {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'file-card__thumb-placeholder';
+      placeholder.textContent = '📄';
+      thumb.appendChild(placeholder);
+    }
+
+    // Info (name + pages)
+    const info = document.createElement('div');
+    info.className = 'file-card__info';
+    const name = document.createElement('div');
+    name.className = 'file-card__name';
+    name.textContent = entry.name;
+    const pages = document.createElement('div');
+    pages.className = 'file-card__pages';
+    pages.textContent = entry.pageCount > 0
+      ? `${entry.pageCount} ${getCurrentLanguage() === 'fr' ? 'page(s)' : 'page(s)'}`
+      : '...';
+    info.appendChild(name);
+    info.appendChild(pages);
+
+    // Actions (move up, move down, remove)
+    const actions = document.createElement('div');
+    actions.className = 'file-card__actions';
+
+    // Drag handle
+    const handle = document.createElement('span');
+    handle.className = 'file-card__drag-handle';
+    handle.textContent = '⣿';
+    handle.setAttribute('aria-hidden', 'true');
+    actions.appendChild(handle);
+
+    // Move up button
+    const upBtn = document.createElement('button');
+    upBtn.className = 'file-card__btn';
+    upBtn.setAttribute('aria-label', t('file.moveUp') || 'Move up');
+    upBtn.title = t('file.moveUp') || 'Move up';
+    upBtn.disabled = index === 0;
+    upBtn.innerHTML = '↑';
+    upBtn.addEventListener('click', () => moveUp(entry.id));
+    actions.appendChild(upBtn);
+
+    // Move down button
+    const downBtn = document.createElement('button');
+    downBtn.className = 'file-card__btn';
+    downBtn.setAttribute('aria-label', t('file.moveDown') || 'Move down');
+    downBtn.title = t('file.moveDown') || 'Move down';
+    downBtn.disabled = index === state.files.length - 1;
+    downBtn.innerHTML = '↓';
+    downBtn.addEventListener('click', () => moveDown(entry.id));
+    actions.appendChild(downBtn);
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'file-card__btn file-card__btn--remove';
+    removeBtn.setAttribute('aria-label', t('file.remove') || 'Remove file');
+    removeBtn.title = t('file.remove') || 'Remove file';
+    removeBtn.innerHTML = '✕';
+    removeBtn.addEventListener('click', () => removeFile(entry.id));
+    actions.appendChild(removeBtn);
+
+    // Assemble card
+    card.appendChild(order);
+    card.appendChild(thumb);
+    card.appendChild(info);
+    card.appendChild(actions);
+
+    // Drag & drop reordering
+    card.addEventListener('dragstart', (e) => {
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(entry.id));
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      // Clean up any lingering drag-over classes
+      fileList.querySelectorAll('.file-card.drag-over').forEach((c) =>
+        c.classList.remove('drag-over')
+      );
+    });
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-over');
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over');
+    });
+
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const draggedId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      const targetId = entry.id;
+      if (draggedId !== targetId) {
+        reorderFiles(draggedId, targetId);
       }
     });
+
+    fileList.appendChild(card);
   });
+
+  updateTotals();
 }
 
 /**
- * Gestion du drop de fichier
+ * Reorder files: move dragged file before or after target.
  */
-function handleDrop(e) {
-  e.preventDefault();
-  elements.dropzone.classList.remove('dragover');
+function reorderFiles(draggedId, targetId) {
+  const draggedIndex = state.files.findIndex((f) => f.id === draggedId);
+  const targetIndex = state.files.findIndex((f) => f.id === targetId);
+  if (draggedIndex === -1 || targetIndex === -1) return;
 
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    loadFile(files[0]);
+  const [moved] = state.files.splice(draggedIndex, 1);
+  state.files.splice(targetIndex, 0, moved);
+
+  renderFileList();
+}
+
+/**
+ * Move a file up by one position.
+ */
+function moveUp(id) {
+  const index = state.files.findIndex((f) => f.id === id);
+  if (index <= 0) return;
+  [state.files[index - 1], state.files[index]] = [state.files[index], state.files[index - 1]];
+  renderFileList();
+}
+
+/**
+ * Move a file down by one position.
+ */
+function moveDown(id) {
+  const index = state.files.findIndex((f) => f.id === id);
+  if (index === -1 || index >= state.files.length - 1) return;
+  [state.files[index + 1], state.files[index]] = [state.files[index], state.files[index + 1]];
+  renderFileList();
+}
+
+/**
+ * Remove a file from state and re-render.
+ */
+function removeFile(id) {
+  state.files = state.files.filter((f) => f.id !== id);
+  renderFileList();
+
+  if (state.files.length === 0) {
+    hideWorkspace();
   }
 }
 
 /**
- * Gestion de la sélection de fichier
+ * Update total pages and file count displays.
  */
-function handleFileSelect(e) {
-  const files = e.target.files;
-  if (files.length > 0) {
-    loadFile(files[0]);
-  }
+function updateTotals() {
+  const totalPages = state.files.reduce((sum, f) => sum + (f.pageCount || 0), 0);
+  if (totalPagesCount) totalPagesCount.textContent = String(totalPages);
+  if (fileCountDisplay) fileCountDisplay.textContent = String(state.files.length);
 }
 
-/**
- * Chargement et traitement d'un fichier
- */
-async function loadFile(file) {
-  const validTypes = [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-    'image/bmp',
-    'image/gif',
-  ];
+// ===== Merge =====
 
-  if (!validTypes.includes(file.type)) {
-    alert(t('alerts.unsupported'));
+/**
+ * Merge all PDFs in state.files into a single PDF using pdf-lib.
+ */
+async function mergePDFs() {
+  if (state.isProcessing) return;
+  if (state.files.length === 0) {
+    showError(t('alerts.noFiles'));
     return;
   }
 
-  // Nettoyer l'URL précédente
-  if (state.fileUrl) {
-    URL.revokeObjectURL(state.fileUrl);
-  }
-
-  state.file = file;
-  state.fileUrl = URL.createObjectURL(file);
-
-  elements.filename.textContent = file.name;
-  elements.dropzone.hidden = true;
-  elements.workspace.hidden = false;
-
-  // Announce to screen readers
-  const srLive = document.getElementById('sr-live');
-  if (srLive) srLive.textContent = `Document ${file.name} loaded. Workspace is now visible.`;
-
-  await renderPreview();
-}
-
-/**
- * Affichage de la prévisualisation
- */
-async function renderPreview() {
-  elements.previewArea.innerHTML = '<div class="spinner"></div>';
+  state.isProcessing = true;
+  showProgress(t('progress.merging'), 0);
 
   try {
-    if (state.file.type === 'application/pdf') {
-      await renderPdfPreview();
-    } else {
-      await renderImagePreview();
+    const mergedPdf = await PDFDocument.create();
+
+    for (let i = 0; i < state.files.length; i++) {
+      const entry = state.files[i];
+      const arrayBuffer = await entry.file.arrayBuffer();
+      const sourcePdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+
+      // Update progress
+      const pct = Math.round(((i + 1) / state.files.length) * 80);
+      showProgress(t('progress.merging'), pct);
     }
-  } catch (error) {
-    console.error('Erreur de rendu:', error);
-    elements.previewArea.innerHTML = '';
-    const errEl = document.createElement('p');
-    errEl.className = 'error';
-    errEl.textContent = `❌ Erreur: ${error.message}`;
-    elements.previewArea.appendChild(errEl);
+
+    // Generate the merged PDF bytes
+    showProgress(t('progress.generating'), 90);
+    const pdfBytes = await mergedPdf.save();
+
+    showProgress(t('progress.generating'), 100);
+
+    // Download
+    downloadMergedPdf(pdfBytes);
+
+    // Announce success
+    announce(t('alerts.success'));
+    showSuccess(t('alerts.success'));
+  } catch (err) {
+    console.error('Merge error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    showError(t('alerts.mergeError', { msg }));
+    announce(t('alerts.mergeError', { msg }));
+  } finally {
+    state.isProcessing = false;
+    setTimeout(() => hideProgress(), 1500);
   }
 }
 
 /**
- * Prévisualisation PDF via PDF.js
+ * Trigger browser download of the merged PDF.
+ * @param {Uint8Array} bytes - PDF file bytes
  */
-async function renderPdfPreview() {
-  try {
-    // Cache the file as a Blob — File.arrayBuffer() can only be consumed once
-    // in some browsers (especially Playwright's Chromium). Subsequent calls
-    // to renderPreview() (e.g. after position/opacity change) would throw
-    // NotReadableError or "detached ArrayBuffer" without this cache.
-    // Blob.arrayBuffer() can be called repeatedly without issues.
-    if (!state.fileBlob) {
-      state.fileBlob = new Blob([await state.file.arrayBuffer()], { type: state.file.type });
-    }
-    const arrayBuffer = await state.fileBlob.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false }).promise;
+function downloadMergedPdf(bytes) {
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const filename = t('merge.resultName', { timestamp }) + '.pdf';
 
-    const containerWidth = elements.previewArea.clientWidth || 600;
-    const totalPages = pdf.numPages;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
-    // Créer un canvas pour chaque page, empilés en scroll
-    elements.previewArea.innerHTML = '';
-    state.previewCanvases = [];
+// ===== Reset =====
 
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const viewport0 = page.getViewport({ scale: 1 });
-      const scale = Math.min(1, containerWidth / viewport0.width);
-      const viewport = page.getViewport({ scale });
+/**
+ * Clear all files and return to initial state.
+ */
+function resetAll() {
+  state.files = [];
+  state.isProcessing = false;
+  state.nextId = 1;
+  renderFileList();
+  hideWorkspace();
+  hideProgress();
+  // Clear any error/success banners
+  const banners = document.querySelectorAll('.error-banner.active, .success-banner.active');
+  banners.forEach((b) => b.classList.remove('active'));
+}
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+// ===== UI Helpers =====
 
-      await page.render({ canvasContext: ctx, viewport }).promise;
+function showWorkspace() {
+  if (workspace) workspace.hidden = false;
+}
 
-      // Appliquer le filigrane sur le canvas rendu
-      const localeMap = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-PT', nl: 'nl-NL', it: 'it-IT' };
-      const locale = localeMap[getCurrentLanguage()] || 'en-US';
-      applyWatermarkToContext(ctx, canvas.width, canvas.height, state.options, locale);
+function hideWorkspace() {
+  if (workspace) workspace.hidden = true;
+}
 
-      // Ajouter un indicateur de page
-      const pageInfo = document.createElement('div');
-      pageInfo.style.cssText = `
-        text-align: center;
-        padding: 8px 0;
-        color: var(--text-tertiary);
-        font-size: 0.9rem;
-        flex-shrink: 0;
-      `;
-      pageInfo.textContent = t('page.indicator', { num: pageNum, total: totalPages });
-      elements.previewArea.appendChild(pageInfo);
-      elements.previewArea.appendChild(canvas);
-
-      // Stocker le canvas pour le téléchargement PDF
-      state.previewCanvases.push(canvas);
-
-      // Laisser le navigateur respirer entre les pages (évite le gel sur gros PDF)
-      if (pageNum % 5 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
-    }
-  } catch (error) {
-    console.error('PDF preview error:', error);
-    elements.previewArea.innerHTML = '';
-    const errEl = document.createElement('p');
-    errEl.className = 'error';
-    errEl.textContent = `❌ Erreur PDF: ${error.message}`;
-    elements.previewArea.appendChild(errEl);
+function showProgress(label, pct) {
+  if (progressContainer) {
+    progressContainer.hidden = false;
+    progressContainer.classList.add('active');
+  }
+  if (progressLabel) progressLabel.textContent = label;
+  if (progressFill) progressFill.style.width = `${pct}%`;
+  if (progressContainer) {
+    progressContainer.setAttribute('aria-valuenow', String(pct));
   }
 }
 
-/**
- * Prévisualisation image
- */
-async function renderImagePreview() {
-  const img = new Image();
-  img.src = state.fileUrl;
-
-  await new Promise((resolve) => {
-    img.onload = resolve;
-  });
-
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-
-  ctx.drawImage(img, 0, 0);
-  const localeMap = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-PT', nl: 'nl-NL', it: 'it-IT' };
-  const locale = localeMap[getCurrentLanguage()] || 'en-US';
-  applyWatermarkToContext(ctx, canvas.width, canvas.height, state.options, locale);
-
-  elements.previewArea.innerHTML = '';
-  elements.previewArea.appendChild(canvas);
-  state.previewCanvas = canvas;
-}
-
-/**
- * Application du filigrane sur un contexte Canvas
- * @param {CanvasRenderingContext2D} ctx - Contexte canvas
- * @param {number} width - Largeur du canvas
- * @param {number} height - Hauteur du canvas
- * @param {Object} opts - Options du filigrane (text, fontSize, color, opacity, position, rotation)
- * @param {string} locale - Locale pour le formatage de date (ex: 'fr-FR')
- */
-function applyWatermarkToContext(ctx, width, height, opts, locale) {
-  let text = opts.text;
-
-  // Replace {date} with today's date; remove unused variables
-  const todayStr = new Date().toLocaleDateString(locale);
-  text = text.replace(/{date}/g, todayStr);
-  text = text.replace(/{destinataire}/g, '').replace(/{usage}/g, '');
-
-  // Calcul proportionnel: la taille dépend de la dimension de l'image
-  // opts.fontSize (16-120) représente un pourcentage de la plus petite dimension
-  const baseDim = Math.min(width, height);
-  const scaleFactor = opts.fontSize / 100; // 48 = 48%, 100 = 100% de baseDim
-  const fontSize = baseDim * scaleFactor;
-
-  // Bornes de sécurité pour éviter des tailles extrêmes
-  const minFontSize = Math.max(24, baseDim * 0.02); // minimum 24px ou 2% de la dimension
-  const maxFontSize = Math.min(baseDim * 0.15, 600); // maximum 15% de la dimension ou 600px
-
-  const finalFontSize = Math.max(minFontSize, Math.min(fontSize, maxFontSize));
-
-  ctx.font = `bold ${finalFontSize}px sans-serif`;
-  ctx.fillStyle = opts.color;
-  ctx.globalAlpha = opts.opacity / 100;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  const lines = text.split('\n');
-  const lineHeight = finalFontSize * 1.3;
-
-  if (opts.position === 'diagonal') {
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    // Canvas: y va vers le bas, rotation négative = diagonale montante ↗️
-    const rot = opts.rotation || -45;
-    ctx.rotate((rot * Math.PI) / 180);
-
-    const startY = (-(lines.length - 1) * lineHeight) / 2;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, 0, startY + i * lineHeight);
-    });
-
-    ctx.restore();
-  } else if (opts.position === 'center') {
-    // Centre, sans rotation (horizontal)
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-
-    const startY = (-(lines.length - 1) * lineHeight) / 2;
-    lines.forEach((line, i) => {
-      ctx.fillText(line, 0, startY + i * lineHeight);
-    });
-
-    ctx.restore();
-  } else if (opts.position === 'bottom') {
-    const y = height - Math.max(100, baseDim * 0.05);
-    lines.forEach((line, i) => {
-      ctx.fillText(line, width / 2, y + i * lineHeight);
-    });
-  } else if (opts.position === 'tile') {
-    const tileSize = Math.min(width, height) / 4;
-    const fontSizeTile = finalFontSize / 2;
-
-    ctx.font = `bold ${fontSizeTile}px sans-serif`;
-
-    for (let x = tileSize / 2; x < width; x += tileSize) {
-      for (let y = tileSize / 2; y < height; y += tileSize) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(((opts.rotation || -45) * Math.PI) / 180);
-
-        const tileLH = fontSizeTile * 1.3;
-        const startY = (-(lines.length - 1) * tileLH) / 2;
-        lines.forEach((line, i) => {
-          ctx.fillText(line, 0, startY + i * tileLH);
-        });
-
-        ctx.restore();
-      }
-    }
+function hideProgress() {
+  if (progressContainer) {
+    progressContainer.hidden = true;
+    progressContainer.classList.remove('active');
   }
+  if (progressFill) progressFill.style.width = '0%';
+}
+
+function showSuccess(msg) {
+  let banner = document.querySelector('.success-banner');
+  if (!banner) return;
+  banner.textContent = msg;
+  banner.classList.add('active');
+  setTimeout(() => banner.classList.remove('active'), 4000);
+}
+
+function showError(msg) {
+  let banner = document.querySelector('.error-banner');
+  if (!banner) return;
+  banner.textContent = msg;
+  banner.classList.add('active');
+  announce(msg);
+  setTimeout(() => banner.classList.remove('active'), 5000);
 }
 
 /**
- * Téléchargement du document modifié
+ * Announce a message to screen readers.
+ * @param {string} msg
  */
-async function handleDownload() {
-  if (!state.file) return;
-  // Pour images: previewCanvas est défini. Pour PDF: previewCanvases est rempli.
-  if (state.file.type === 'application/pdf' && state.previewCanvases.length === 0) return;
-  if (state.file.type !== 'application/pdf' && !state.previewCanvas) return;
-
-  try {
-    let blob;
-
-    if (state.file.type === 'application/pdf') {
-      // Pour PDF, on prend les canvases déjà rendus et on les emballe dans un PDF
-      blob = await canvasesToPdf(state.previewCanvases);
-    } else {
-      // Pour images, on prend le canvas déjà traité
-      blob = await new Promise((resolve) => {
-        state.previewCanvas.toBlob(resolve, state.file.type || 'image/png');
-      });
-    }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const ext = state.file.type === 'application/pdf' ? 'pdf' : 'png';
-    const baseName = state.file.name.replace(/\.[^.]+$/, '');
-    a.href = url;
-    a.download = `${baseName}_watermarked.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Erreur de téléchargement:', error);
-    alert(t('alerts.downloadError', { error: error.message }));
-  }
-}
-
-/**
- * Convertit un tableau de canvases en PDF (copie conforme de la preview)
- */
-async function canvasesToPdf(canvases) {
-  const { PDFDocument } = await import('pdf-lib');
-  const pdfDoc = await PDFDocument.create();
-
-  for (const canvas of canvases) {
-    // Convertir canvas en JPEG (quality 0.95 pour haute qualité, minime perte)
-    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-    const jpegBase64 = jpegDataUrl.split(',')[1];
-    const jpegBytes = Uint8Array.from(atob(jpegBase64), (c) => c.charCodeAt(0));
-
-    // Embed image
-    const image = await pdfDoc.embedJpg(jpegBytes);
-    const width = image.width;
-    const height = image.height;
-
-    // Add page de même taille
-    const page = pdfDoc.addPage([width, height]);
-    page.drawImage(image, {
-      x: 0,
-      y: 0,
-      width,
-      height,
+function announce(msg) {
+  if (srLive) {
+    srLive.textContent = '';
+    // Force re-announcement by clearing then setting
+    requestAnimationFrame(() => {
+      if (srLive) srLive.textContent = msg;
     });
   }
-
-  const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
 }
 
-/**
- * Réinitialisation de l'application
- */
-function resetApp() {
-  if (state.fileUrl) {
-    URL.revokeObjectURL(state.fileUrl);
-  }
-
-  state.file = null;
-  state.fileUrl = null;
-  state.fileBlob = null; // Clear cached Blob
-  state.previewCanvas = null;
-  state.previewCanvases = [];
-
-  elements.fileInput.value = '';
-  elements.dropzone.hidden = false;
-  elements.workspace.hidden = true;
-  elements.previewArea.innerHTML = '';
+// ===== Boot =====
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
-
-/**
- * Debounce pour éviter les recalculs trop fréquents
- */
-let debounceTimer;
-function debouncedPreview() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    renderPreview();
-  }, 300);
-}
-
-/**
- * Enregistrement du Service Worker pour PWA
- */
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then(() => console.log('✅ Service Worker registered'))
-      .catch((err) => console.warn('⚠️ SW registration failed:', err));
-  }
-}
-
-// Démarrage
-init();
