@@ -1,141 +1,221 @@
 # PDF Merger
 
-> Merge multiple PDF files into a single document — 100% client-side, no uploads, no servers.
+> Merge multiple PDF files into a single document — 100% client-side, privacy-first
 
 <div align="center">
 
 ![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-red)
 ![Platform](https://img.shields.io/badge/Platform-Web-green)
+![Tests](https://img.shields.io/badge/Tests-Playwright%20%7C%20Vitest-blue)
 
-**Privacy-first PDF merging — your files never leave your browser**
+**Your files never leave your browser — no uploads, no servers, no tracking**
 
 </div>
 
 ---
 
-## 🔒 Why PDF Merger?
+## 🔒 Privacy-First Design
 
-Need to combine multiple PDFs into one? Contract + annexes? Multiple scanned pages?  
-PDF Merger does it **locally in your browser** — no upload, no server, no tracking.
+Need to combine multiple PDFs into one? Contract + annexes? Multiple scanned pages? Invoice + receipt?
+
+PDF Merger does it **locally in your browser** using [pdf-lib](https://pdf-lib.js.org/) and [PDF.js](https://mozilla.github.io/pdf.js/). Your files stay on your device — nothing is uploaded to any server.
 
 ---
 
 ## ⚡ Key Features
 
-- **🔒 100% local**: Your PDFs stay on your device, no uploads
-- **📄 Drag & drop**: Add up to 10 PDF files at once
-- **🔀 Reorder files**: Drag-and-drop to rearrange before merging
-- **🖼️ Page thumbnails**: Live preview of each PDF's first page
-- **📊 Total page counter**: See the combined page count in real-time
-- **🌍 7 languages**: EN, FR, DE, ES, PT, NL, IT
-- **♿ Accessible**: ARIA-compliant, keyboard navigation, screen reader support
-- **💾 PWA installable**: Add to home screen or install as an app
+- **🔒 100% Local Processing** — All operations happen in your browser using WebAssembly
+- **📄 Multiple File Support** — Merge up to 10 PDF files at once
+- **🔀 Drag-and-Drop Reordering** — Rearrange files before merging
+- **🖼️ Page Thumbnails** — Live preview of each PDF's first page
+- **🌐 Multi-Language** — Supports EN, FR, DE, ES, PT, NL, IT
+- **♿ Accessible** — Full keyboard navigation and screen reader support (ARIA-compliant)
+- **📱 PWA Ready** — Install as a Progressive Web App on mobile devices
+- **📊 File Statistics** — See page counts and total size before merging
 
 ---
 
-## 🚀 Usage
+## 🚀 Quick Start
 
-### Online
+### Online Demo
+Visit the live demo (if hosted): `https://[your-domain]/pdf-merger`
 
-Access the app from any modern browser:
-- Desktop: Chrome, Firefox, Safari, Edge
-- Mobile: Safari (iOS), Chrome (Android)
-
-### Local Installation
-
+### Local Development
 ```bash
+# Clone the repository
 git clone https://github.com/Hichiro6/pdf-merger.git
 cd pdf-merger
+
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
-```
 
-The app opens at `http://localhost:5173`
-
-### Production Build
-
-```bash
+# Build for production
 npm run build
-# The dist folder contains everything needed for deployment
-```
 
-Deploy on GitHub Pages, Netlify, Vercel, or any static host.
+# Preview production build
+npm run preview
+```
 
 ---
 
-## 💡 How It Works
+## 📖 Usage Guide
 
-1. **Drag & drop** your PDF files (or click to select)
-2. **Reorder** them via drag-and-drop
-3. Click **Merge PDFs**
-4. **Download** the merged document
+### Step 1: Upload Your PDF Files
+- Drag and drop multiple PDF files onto the dropzone, or
+- Click to browse and select multiple files at once
 
-> ⚠️ **Important**: No files are sent to a server. Everything is processed locally in your browser via JavaScript.
+### Step 2: Reorder Files (Optional)
+Drag and drop file cards to rearrange the merge order. The final PDF will follow this order.
 
----
-
-## 🛠️ Tech Stack
-
-| Role | Technology |
-|------|------------|
-| Framework | Vite (vanilla JS) |
-| PDF Manipulation | pdf-lib |
-| PDF Rendering | pdfjs-dist (thumbnails) |
-| i18n | Custom lightweight system |
-| Styling | Modern CSS3 (CSS Variables) |
-| Build | Vite |
+### Step 3: Merge and Download
+Click "Merge PDFs" to combine all files into a single document.
+Download the merged PDF immediately.
 
 ---
 
-## 📁 Project Structure
+## 🛠️ Technical Stack
 
-```
-pdf-merger/
-├── index.html              # Main page
-├── src/
-│   ├── main.js             # Main application logic
-│   └── i18n.js             # Internationalization (7 languages)
-├── styles/
-│   └── main.css            # Global styles
-├── tests/
-│   ├── unit/               # Vitest unit tests
-│   └── e2e/                # Playwright E2E tests
-├── LICENSE                 # CC BY-NC-ND 4.0
-├── README.md
-└── package.json
-```
+| Technology | Purpose |
+|------------|---------|
+| **[Vite](https://vitejs.dev/)** | Build tool & dev server |
+| **[pdf-lib](https://pdf-lib.js.org/)** | PDF manipulation (merging) |
+| **[PDF.js](https://mozilla.github.io/pdf.js/)** | PDF rendering & preview |
+| **[Biome](https://biomejs.dev/)** | Linting & formatting |
+| **[Vitest](https://vitest.dev/)** | Unit testing |
+| **[Playwright](https://playwright.dev/)** | E2E testing |
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-npm run test:run        # unit tests (Vitest)
-npm run test:e2e        # E2E tests (Playwright)
+# Run unit tests
+npm run test:unit
+
+# Run E2E tests
+npm run test:e2e
+
+# Run tests with UI
+npm run test:ui
+
+# View test report
+npm run test:report
+```
+
+Test coverage includes:
+- Multi-file upload & validation
+- Drag-and-drop reordering
+- PDF merging accuracy
+- Page order preservation
+- Edge cases (password-protected PDFs, mixed page counts)
+
+---
+
+## 📂 Project Structure
+
+```
+pdf-merger/
+├── src/
+│   ├── main.js           # Application logic
+│   └── i18n.js           # Internationalization
+├── styles/
+│   └── main.css          # Global styles
+├── public/
+│   ├── manifest.json     # PWA manifest
+│   ├── sw.js             # Service worker
+│   └── icons/            # PWA icons
+├── tests/
+│   ├── unit/             # Unit tests
+│   └── e2e/              # Playwright E2E tests
+├── vite.config.js        # Vite configuration
+├── playwright.config.js  # Playwright configuration
+├── biome.json            # Biome linting rules
+├── Dockerfile            # Container deployment
+└── docker-compose.yml    # Docker Compose setup
 ```
 
 ---
 
-## 📝 License
+## 🔧 Available Scripts
 
-**CC BY-NC-ND 4.0** — Attribution - NonCommercial - NoDerivatives
-
-See [LICENSE](LICENSE) for the full text.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server (HMR enabled) |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Check code with Biome |
+| `npm run format` | Format code with Biome |
+| `npm test` | Run all tests |
+| `docker compose up` | Run in Docker container |
 
 ---
 
-## 📧 Contact
+## 🌍 Internationalization
 
-Developed by **Hichiro** (GitHub: [@Hichiro6](https://github.com/Hichiro6))
+Supported languages:
+- **English** (default)
+- **Français** (FR)
+- **Deutsch** (DE)
+- **Español** (ES)
+- **Português** (PT)
+- **Nederlands** (NL)
+- **Italiano** (IT)
 
-Issues and PRs on GitHub: https://github.com/Hichiro6/pdf-merger
+Add your language by editing `src/i18n.js`.
+
+---
+
+## 📝 Use Cases
+
+- **Contracts**: Combine agreement + terms + signatures into one file
+- **Business**: Merge invoices, receipts, and purchase orders
+- **Academic**: Combine research papers into a reference pack
+- **Personal**: Organize family photos scanned as separate PDFs
+- **Administrative**: Bundle identity documents for applications
+
+---
+
+## 🔐 Security & Privacy
+
+- ✅ **No network calls** — All processing is local
+- ✅ **No analytics** — No tracking or telemetry
+- ✅ **No cookies** — Nothing stored externally
+- ✅ **Open source** — Code is auditable
+- ✅ **Client-side only** — No backend requirements
+
+---
+
+## 📄 License
+
+Copyright © 2026 Hichiro6
+
+Licensed under **CC BY-NC-ND 4.0** — You are free to share and adapt this work for non-commercial purposes, provided you give attribution and do not create derivative works.
+
+See [LICENSE](LICENSE) for details.
+
+---
+
+## 🤝 Contributing
+
+This project is released under a restrictive license to protect privacy-focused usage. For commercial licensing or contributions, please open an issue.
+
+---
+
+## 🙏 Acknowledgments
+
+- [pdf-lib](https://pdf-lib.js.org/) — PDF manipulation library
+- [PDF.js](https://mozilla.github.io/pdf.js/) — Mozilla's PDF toolkit
+- [Vite](https://vitejs.dev/) — Next-generation frontend tooling
 
 ---
 
 <div align="center">
 
-**Merge your PDFs — simply, locally, securely.**
+**Made with ❤️ for privacy-conscious users**
 
-Made with ❤️ in Belgium
+[Report Bug](https://github.com/Hichiro6/pdf-merger/issues) · [Request Feature](https://github.com/Hichiro6/pdf-merger/issues)
 
 </div>

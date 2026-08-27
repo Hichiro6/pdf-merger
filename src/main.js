@@ -104,7 +104,14 @@ async function handleFiles(fileListInput) {
       break;
     }
 
-    // Add file to state (duplicates now allowed — user might want same PDF multiple times)
+    // Check for duplicate file (same name + size)
+    const isDuplicate = state.files.some(f => f.name === file.name && f.size === file.size);
+    if (isDuplicate) {
+      showError(t('alerts.duplicate'));
+      continue;
+    }
+
+    // Add file to state
     const id = state.nextId++;
     const entry = {
       id,
