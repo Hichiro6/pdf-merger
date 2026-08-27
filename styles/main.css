@@ -865,6 +865,7 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   gap: 1rem;
+  width: 100%;
   padding: 1rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-standard);

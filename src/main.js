@@ -24,7 +24,7 @@ const state = {
 
 // ===== DOM refs =====
 let dropzone, fileInput, workspace, fileList, progressContainer,
-    progressFill, progressLabel, btnMerge, btnAddMore, btnResetAll, btnReset,
+    progressFill, progressLabel, btnMerge, btnResetAll, btnReset,
     totalPagesCount, fileCountDisplay, srLive;
 
 // ===== Init =====
@@ -38,7 +38,7 @@ function init() {
   progressFill = document.getElementById('progress-fill');
   progressLabel = document.getElementById('progress-label');
   btnMerge = document.getElementById('btn-merge');
-  btnAddMore = document.getElementById('btn-add-more');
+  // btnAddMore supprimé — référence plus nécessaire
   btnResetAll = document.getElementById('btn-reset-all');
   btnReset = document.getElementById('btn-reset');
   totalPagesCount = document.getElementById('total-pages-count');
@@ -77,7 +77,7 @@ function init() {
 
   // Button events
   btnMerge.addEventListener('click', mergePDFs);
-  btnAddMore.addEventListener('click', () => fileInput.click());
+  // btnAddMore supprimé — doublon avec la dropzone cliquable
   btnResetAll.addEventListener('click', resetAll);
   if (btnReset) btnReset.addEventListener('click', resetAll);
 }
@@ -104,16 +104,7 @@ async function handleFiles(fileListInput) {
       break;
     }
 
-    // Check duplicate (by name + size)
-    const isDuplicate = state.files.some(
-      (f) => f.name === file.name && f.size === file.size
-    );
-    if (isDuplicate) {
-      showError(t('alerts.duplicate'));
-      continue;
-    }
-
-    // Add file to state
+    // Add file to state (duplicates now allowed — user might want same PDF multiple times)
     const id = state.nextId++;
     const entry = {
       id,
