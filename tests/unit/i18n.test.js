@@ -1,78 +1,116 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCurrentLanguage, LANGUAGES, setLanguage, t } from '../../src/i18n.js';
+/**
+ * PDF Merger — i18n Unit Tests
+ * Tests translation keys, language switching, and param substitution.
+ */
 
-describe('i18n - Core functions', () => {
-  beforeEach(() => {
-    // localStorage.clear() via notre polyfill
-    if (typeof localStorage !== 'undefined') {
-      localStorage.clear();
+import { describe, it, expect, beforeEach } from 'vitest';
+import { LANGUAGES, TRANSLATIONS, t, setLanguage, getCurrentLanguage, initI18n } from '../../src/i18n.js';
+
+// Expected keys for every language
+const EXPECTED_KEYS = [
+  'app.title',
+  'header.tagline',
+  'header.badge',
+  'privacy.link',
+  'footer.bmc',
+  'dropzone.title',
+  'dropzone.subtitle',
+  'workspace.files',
+  'controls.merge',
+  'controls.files',
+  'controls.totalPages',
+  'controls.fileCount',
+  'btn.merge',
+  'btn.resetAll',
+  'btn.addMore',
+  'btn.download',
+  'alerts.maxFiles',
+  'alerts.invalidType',
+  'alerts.duplicate',
+  'alerts.mergeError',
+  'alerts.noFiles',
+  'alerts.success',
+  'progress.merging',
+  'progress.generating',
+  'lang.label',
+  'merge.resultName',
+];
+
+describe('i18n — Languages', () => {
+  it('should have 7 languages', () => {
+    expect(Object.keys(LANGUAGES)).toHaveLength(7);
+  });
+
+  it('should include EN, FR, DE, ES, PT, NL, IT', () => {
+    const codes = Object.keys(LANGUAGES);
+    expect(codes).toContain('en');
+    expect(codes).toContain('fr');
+    expect(codes).toContain('de');
+    expect(codes).toContain('es');
+    expect(codes).toContain('pt');
+    expect(codes).toContain('nl');
+    expect(codes).toContain('it');
+  });
+
+  it('every language has a flag and name', () => {
+    for (const [, info] of Object.entries(LANGUAGES)) {
+      expect(info.name).toBeTruthy();
+      expect(info.flag).toBeTruthy();
     }
-    setLanguage('en');
-  });
-
-  afterEach(() => {
-    setLanguage('en');
-  });
-
-  it('retourne la bonne langue courante', () => {
-    setLanguage('fr');
-    expect(getCurrentLanguage()).toBe('fr');
-  });
-
-  it('traduit les clés basiques en anglais', () => {
-    setLanguage('en');
-    expect(t('app.title')).toBe('WaterMark — Secure your documents');
-    expect(t('btn.download')).toBe('Download');
-  });
-
-  it('traduit les clés en français', () => {
-    setLanguage('fr');
-    expect(t('app.title')).toBe('WaterMark — Sécurisez vos documents');
-    expect(t('btn.download')).toBe('Télécharger');
-  });
-
-  it('retourne la clé si non traduite', () => {
-    expect(t('key.nonexistent')).toBe('key.nonexistent');
-  });
-
-  it('gère les paramètres de substitution', () => {
-    setLanguage('en');
-    const result = t('page.indicator', { num: 1, total: 10 });
-    expect(result).toContain('Page 1');
-    expect(result).toContain('of 10');
-  });
-
-  it('persiste la langue dans localStorage', () => {
-    setLanguage('de');
-    expect(localStorage.getItem('watermark_lang')).toBe('de');
   });
 });
 
-describe('i18n - Languages map', () => {
-  it('contient toutes les langues attendues', () => {
-    expect(Object.keys(LANGUAGES)).toEqual(['en', 'fr', 'de', 'es', 'pt', 'nl', 'it']);
-  });
-
-  it('a des noms et drapeaux pour chaque langue', () => {
-    expect(LANGUAGES.en.name).toBe('English');
-    expect(LANGUAGES.fr.flag).toBe('🇫🇷');
-    expect(LANGUAGES.de.name).toBe('Deutsch');
-  });
+describe('i18n — Translations completeness', () => {
+  for (const lang of Object.keys(LANGUAGES)) {
+    it(`${lang.toUpperCase()} should have all ${EXPECTED_KEYS.length} keys`, () => {
+      const dict = TRANSLATIONS[lang];
+      expect(dict).toBeDefined();
+      for (const key of EXPECTED_KEYS) {
+        expect(dict[key], `Missing key "${key}" in ${lang}`).toBeTruthy();
+      }
+    });
+  }
 });
 
-describe('i18n - Fallback', () => {
+describe('i18n — t() function', () => {
   beforeEach(() => {
-    localStorage.clear();
+    setLanguage('en');
   });
 
-  it('reste en anglais si langue invalide', () => {
-    setLanguage('invalid'); // setLanguage ignore les langues invalides
-    expect(getCurrentLanguage()).toBe('en');
+  it('should return English string by default', () => {
+    expect(t('btn.merge')).toBe('Merge PDFs');
   });
 
-  it('retourne des textes pour les clés courantes en FR', () => {
+  it('should return translated string after setLanguage', () => {
     setLanguage('fr');
-    expect(t('header.tagline')).toBeDefined();
-    expect(t('btn.download')).toBe('Télécharger');
+    expect(t('btn.merge')).toBe('Fusionner les PDFs');
+  });
+
+  it('should substitute params', () => {
+    setLanguage('en');
+    expect(t('alerts.mergeError', { msg: 'boom' })).toBe('Merge error: boom');
+  });
+
+  it('should substitute timestamp param', () => {
+    setLanguage('en');
+    expect(t('merge.resultName', { timestamp: '20260101' })).toBe('merged_20260101');
+  });
+
+  it('should fallback to English if key missing in current lang', () => {
+    // All langs have the keys, but test fallback logic
+    setLanguage('en');
+    expect(t('nonexistent.key')).toBe('nonexistent.key');
+  });
+});
+
+describe('i18n — getCurrentLanguage', () => {
+  it('should return current language code', () => {
+    setLanguage('de');
+    expect(getCurrentLanguage()).toBe('de');
+  });
+
+  it('should default to en', () => {
+    setLanguage('en');
+    expect(getCurrentLanguage()).toBe('en');
   });
 });

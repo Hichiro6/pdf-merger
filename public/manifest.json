@@ -1,7 +1,7 @@
 {
-  "name": "WaterMark — Secure Documents",
-  "short_name": "WaterMark",
-  "description": "Add security watermarks to administrative documents — 100% local",
+  "name": "PDF Merger — Merge your PDF files",
+  "short_name": "PDF Merger",
+  "description": "Merge PDF files in your browser — 100% local, your files never leave your browser",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#08090a",
