@@ -1125,7 +1125,7 @@ input[type="range"]::-moz-range-thumb {
     flex-wrap: wrap;
     gap: 0.5rem;
     padding: 0.75rem;
-    overflow: hidden; /* Prevent children from bleeding out */
+    overflow: hidden;
   }
 
   /* Compact order badge */
@@ -1152,15 +1152,15 @@ input[type="range"]::-moz-range-thumb {
   .file-card__actions {
     order: 2;
     margin-left: auto;
-    gap: 0.2rem;
+    gap: 0.25rem;
     width: auto;
   }
 
-  /* Compact action buttons */
+  /* Larger action buttons for better touch targets */
   .file-card__btn {
-    width: 32px;
-    height: 32px;
-    font-size: 0.85rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
 
   /* Remove (X) button — visible square, right-aligned */
@@ -1176,10 +1176,28 @@ input[type="range"]::-moz-range-thumb {
     border-color: var(--danger);
   }
 
-  /* Drag handle — compact */
+  /* Drag handle — larger for touch */
   .file-card__drag-handle {
-    font-size: 0.85rem;
-    padding: 0 0.15rem;
+    font-size: 1rem;
+    padding: 0 0.25rem;
+  }
+
+  /* Header reset (X) button — match file card button size */
+  .workspace__preview-header .btn--ghost {
+    width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: var(--radius-sm) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .workspace__preview-header .btn--ghost svg {
+    width: 16px !important;
+    height: 16px !important;
   }
 
   /* Merge controls — tighter spacing */
