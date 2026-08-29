@@ -10,52 +10,62 @@
  */
 
 :root {
-  /* Palette Linear — Dark mode */
+  color-scheme: dark;
+
+  /* Palette Linear — Dark mode (default) */
   --bg-marketing: #08090a;
   --bg-panel: #0f1011;
   --bg-surface: #191a1b;
   --bg-elevated: #28282c;
-  
+  --surface-hover: rgba(255, 255, 255, 0.06);
+
   --text-primary: #f7f8f8;
   --text-secondary: #d0d6e0;
   --text-tertiary: #8a8f98;
   --text-quaternary: #62666d;
-  
-  --brand-indigo: #5e6ad2;
+
+  --brand-indigo: #9a9bff;
   --brand-accent: #9a9bff;
   --brand-hover: #828fff;
-  
+
   --border-subtle: rgba(255,255,255,0.05);
   --border-standard: rgba(255,255,255,0.08);
   --border-prominent: #23252a;
-  
+
   --success: #27a644;
   --danger: #e84545;
-  
+
   /* Accessibilité — augmenté */
   --touch-target-min: 48px; /* > 44px WCAG AA */
   --base-font-size: 18px;   /* Plus grand pour seniors */
   --line-height-relaxed: 1.6;
-  
-  /* Radius */
+
+  /* Radius — WaterMark standard */
   --radius-sm: 6px;
-  --radius-md: 8px;
+  --radius-md: 12px;
   --radius-lg: 12px;
   --radius-pill: 9999px;
+
+  /* Font family — Inter preferred per WaterMark */
+  --font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
+    color-scheme: light;
+
     --bg-marketing: #f7f8f8;
     --bg-panel: #f3f4f5;
     --bg-surface: #ffffff;
     --bg-elevated: #ffffff;
-    
+    --surface-hover: rgba(0, 0, 0, 0.04);
+
     --text-primary: #171717;
     --text-secondary: #444444;
     --text-tertiary: #6b6b6b;
     --text-quaternary: #8c8c8c;
-    
+
     --border-subtle: rgba(0,0,0,0.08);
     --border-standard: rgba(0,0,0,0.12);
     --border-prominent: #d0d6e0;
@@ -75,7 +85,7 @@ html {
 }
 
 body {
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-marketing);
   color: var(--text-primary);
   line-height: var(--line-height-relaxed);
@@ -132,8 +142,8 @@ body {
   border-radius: var(--radius-pill);
   font-size: 0.9rem;
   font-weight: 510;
-  border: 1px solid var(--brand-indigo);
-  background: rgba(94, 106, 210, 0.1);
+  border: 1px solid var(--brand-accent);
+  background: rgba(154, 155, 255, 0.1);
   color: var(--brand-accent);
 }
 
@@ -369,7 +379,7 @@ body {
   border-radius: 4px;
   font-size: 0.8rem;
   color: var(--brand-accent);
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .value-badge {
@@ -423,7 +433,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 24px; /* Plus grand */
   height: 24px;
   border-radius: 50%;
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   cursor: pointer;
   border: 3px solid var(--bg-panel);
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
@@ -438,7 +448,7 @@ input[type="range"]::-moz-range-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   cursor: pointer;
   border: 3px solid var(--bg-panel);
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
@@ -472,7 +482,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .seg-btn.active {
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   color: white;
 }
 
@@ -484,14 +494,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .color-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 3px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .color-btn:hover {
@@ -534,8 +544,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .preset-btn.active {
-  border-color: var(--brand-indigo);
-  background: rgba(94, 106, 210, 0.12);
+  border-color: var(--brand-accent);
+  background: rgba(154, 155, 255, 0.12);
 }
 
 .preset-btn__icon {
@@ -570,14 +580,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .btn--primary {
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   color: white;
 }
 
 .btn--primary:hover:not(:disabled) {
   background: var(--brand-accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(94, 106, 210, 0.35);
+  box-shadow: 0 4px 12px rgba(154, 155, 255, 0.35);
 }
 
 .btn--ghost {
@@ -600,8 +610,8 @@ input[type="range"]::-moz-range-thumb {
 
 /* Info box */
 .info-box {
-  background: rgba(94, 106, 210, 0.1);
-  border: 1px solid var(--brand-indigo);
+  background: rgba(154, 155, 255, 0.1);
+  border: 1px solid var(--brand-accent);
   border-radius: var(--radius-md);
   padding: 1rem 1.25rem;
   font-size: 0.9rem;
@@ -615,7 +625,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--brand-accent);
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 /* ===== Spinner ===== */
@@ -760,7 +770,7 @@ input[type="range"]::-moz-range-thumb {
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 44px;
+  min-height: 48px;
   display: inline-flex;
   align-items: center;
 }
@@ -772,8 +782,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .date-preset-btn.active {
-  border-color: var(--brand-indigo);
-  background: rgba(94, 106, 210, 0.15);
+  border-color: var(--brand-accent);
+  background: rgba(154, 155, 255, 0.15);
   color: var(--brand-accent);
 }
 
@@ -784,7 +794,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   padding: 0.25rem 0.5rem;
   margin: 0.75rem auto 0;
-  background: var(--surface-elevated);
+  background: var(--bg-elevated);
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
   width: fit-content;
@@ -793,14 +803,14 @@ input[type="range"]::-moz-range-thumb {
 .lang-btn {
   background: transparent;
   border: none;
-  padding: 0.375rem 0.5rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 1.125rem;
   cursor: pointer;
   transition: all 0.15s ease;
   opacity: 0.6;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 48px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -813,7 +823,7 @@ input[type="range"]::-moz-range-thumb {
 
 .lang-btn.active {
   opacity: 1;
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2);
 }
 
@@ -905,7 +915,7 @@ input[type="range"]::-moz-range-thumb {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   color: white;
   display: flex;
   align-items: center;
@@ -969,8 +979,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .file-card__btn {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border: none;
   background: transparent;
   color: var(--text-tertiary);
@@ -980,6 +990,8 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .file-card__btn:hover:not(:disabled) {
@@ -1033,10 +1045,17 @@ input[type="range"]::-moz-range-thumb {
 
 .progress-bar__fill {
   height: 100%;
-  background: var(--brand-indigo);
+  background: var(--brand-accent);
   border-radius: 3px;
   transition: width 0.3s ease;
   width: 0%;
+}
+
+.progress-bar__label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  display: block;
 }
 
 /* ===== Merge Controls ===== */
@@ -1051,8 +1070,8 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem 1.25rem;
-  background: rgba(94, 106, 210, 0.08);
-  border: 1px solid var(--brand-indigo);
+  background: rgba(154, 155, 255, 0.08);
+  border: 1px solid var(--brand-accent);
   border-radius: var(--radius-md);
 }
 
@@ -1158,8 +1177,8 @@ input[type="range"]::-moz-range-thumb {
 
   /* Larger action buttons for better touch targets */
   .file-card__btn {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     font-size: 1rem;
   }
 
@@ -1182,11 +1201,11 @@ input[type="range"]::-moz-range-thumb {
     padding: 0 0.25rem;
   }
 
-  /* Header reset (X) button — match file card button size */
+  /* Header reset (X) button — match file card button size (48px) */
   .workspace__preview-header .btn--ghost {
-    width: 40px !important;
-    height: 40px !important;
-    min-height: 40px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;

@@ -7,17 +7,22 @@
   <meta name="theme-color" content="#08090a" />
 
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+  <link rel="manifest" href="./public/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./public/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./public/icon-512.png" />
 
   <!-- iOS web app -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="PDF Merger" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" href="./public/apple-touch-icon.png" />
   <title>PDF Merger — Merge PDF files in your browser</title>
+
+  <!-- Inter font per WaterMark design system -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;510;590&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div class="app">
@@ -60,7 +65,7 @@
       <div class="workspace__preview">
         <div class="workspace__preview-header">
           <span class="filename" id="filename" data-i18n="workspace.files">Uploaded files</span>
-          <button class="btn btn--ghost" id="btn-reset" title="Start over" aria-label="Reset and start over">
+          <button class="btn btn--ghost btn--icon" id="btn-reset" title="Start over" aria-label="Reset and start over">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M14 4L4 14M4 4L14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
@@ -141,6 +146,6 @@
   <!-- Screen reader announcements -->
   <div id="sr-live" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0"></div>
 
-  <script type="module" src="/src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

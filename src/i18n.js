@@ -50,6 +50,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Generating merged PDF...',
     'lang.label': 'Language',
     'merge.resultName': 'merged_{timestamp}',
+    'file.pages': 'pages',
+    'file.moveUp': 'Move up',
+    'file.moveDown': 'Move down',
+    'file.remove': 'Remove file',
   },
 
   fr: {
@@ -79,6 +83,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Génération du PDF fusionné...',
     'lang.label': 'Langue',
     'merge.resultName': 'fusionne_{timestamp}',
+    'file.pages': 'pages',
+    'file.moveUp': 'Monter',
+    'file.moveDown': 'Descendre',
+    'file.remove': 'Supprimer le fichier',
   },
 
   de: {
@@ -108,6 +116,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Zusammengeführtes PDF wird erstellt...',
     'lang.label': 'Sprache',
     'merge.resultName': 'zusammengefuhrt_{timestamp}',
+    'file.pages': 'Seiten',
+    'file.moveUp': 'Nach oben',
+    'file.moveDown': 'Nach unten',
+    'file.remove': 'Datei entfernen',
   },
 
   es: {
@@ -137,6 +149,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Generando PDF combinado...',
     'lang.label': 'Idioma',
     'merge.resultName': 'combinado_{timestamp}',
+    'file.pages': 'páginas',
+    'file.moveUp': 'Subir',
+    'file.moveDown': 'Bajar',
+    'file.remove': 'Eliminar archivo',
   },
 
   pt: {
@@ -166,6 +182,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Gerando PDF combinado...',
     'lang.label': 'Idioma',
     'merge.resultName': 'combinado_{timestamp}',
+    'file.pages': 'páginas',
+    'file.moveUp': 'Mover para cima',
+    'file.moveDown': 'Mover para baixo',
+    'file.remove': 'Remover arquivo',
   },
 
   nl: {
@@ -195,6 +215,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Samengevoegde PDF genereren...',
     'lang.label': 'Taal',
     'merge.resultName': 'samengevoegd_{timestamp}',
+    'file.pages': "pagina's",
+    'file.moveUp': 'Omhoog',
+    'file.moveDown': 'Omlaag',
+    'file.remove': 'Bestand verwijderen',
   },
 
   it: {
@@ -224,6 +248,10 @@ export const TRANSLATIONS = {
     'progress.generating': 'Generazione del PDF unito...',
     'lang.label': 'Lingua',
     'merge.resultName': 'unito_{timestamp}',
+    'file.pages': 'pagine',
+    'file.moveUp': 'Sposta su',
+    'file.moveDown': 'Sposta giù',
+    'file.remove': 'Rimuovi file',
   },
 };
 

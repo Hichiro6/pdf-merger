@@ -24,7 +24,7 @@ const state = {
 
 // ===== DOM refs =====
 let dropzone, fileInput, workspace, fileList, progressContainer,
-    progressFill, progressLabel, btnMerge, btnResetAll, btnReset,
+    progressBar, progressFill, progressLabel, btnMerge, btnResetAll, btnReset,
     totalPagesCount, fileCountDisplay, srLive;
 
 // ===== Init =====
@@ -35,10 +35,10 @@ function init() {
   workspace = document.getElementById('workspace');
   fileList = document.getElementById('file-list');
   progressContainer = document.getElementById('progress-container');
+  progressBar = document.getElementById('progress-bar');
   progressFill = document.getElementById('progress-fill');
   progressLabel = document.getElementById('progress-label');
   btnMerge = document.getElementById('btn-merge');
-  // btnAddMore supprimé — référence plus nécessaire
   btnResetAll = document.getElementById('btn-reset-all');
   btnReset = document.getElementById('btn-reset');
   totalPagesCount = document.getElementById('total-pages-count');
@@ -77,9 +77,31 @@ function init() {
 
   // Button events
   btnMerge.addEventListener('click', mergePDFs);
-  // btnAddMore supprimé — doublon avec la dropzone cliquable
   btnResetAll.addEventListener('click', resetAll);
   if (btnReset) btnReset.addEventListener('click', resetAll);
+
+  // Collapsible control groups — keyboard accessible toggle
+  document.querySelectorAll('.control-group__title').forEach((title) => {
+    title.addEventListener('click', () => toggleControlGroup(title));
+    title.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleControlGroup(title);
+      }
+    });
+  });
+}
+
+/**
+ * Toggle a control group's collapsed/expanded state.
+ * @param {HTMLElement} title - The .control-group__title element
+ */
+function toggleControlGroup(title) {
+  const body = title.nextElementSibling;
+  if (!body) return;
+  const isExpanded = title.getAttribute('aria-expanded') === 'true';
+  title.setAttribute('aria-expanded', String(!isExpanded));
+  body.classList.toggle('collapsed');
 }
 
 // ===== File Handling =====
@@ -126,23 +148,47 @@ async function handleFiles(fileListInput) {
     renderFileList();
 
     // Async: get page count and thumbnail
+    let pdfDoc = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       entry.pageCount = pdfDoc.numPages;
 
       // Generate thumbnail from page 1
       const page = await pdfDoc.getPage(1);
       const viewport = page.getViewport({ scale: 0.4 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      entry.thumbnailUrl = canvas.toDataURL('image/png');
+
+      // Guard against canvas size exceeding mobile Safari limits (~16.7MP)
+      const maxPixels = 16700000;
+      const canvasPixels = viewport.width * viewport.height;
+      const scale = canvasPixels > maxPixels
+        ? Math.sqrt(maxPixels / canvasPixels) * 0.4
+        : 0.4;
+
+      if (scale !== 0.4) {
+        const scaledViewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(scaledViewport.width);
+        canvas.height = Math.floor(scaledViewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+        entry.thumbnailUrl = canvas.toDataURL('image/png');
+      } else {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        entry.thumbnailUrl = canvas.toDataURL('image/png');
+      }
     } catch (err) {
       console.warn('Failed to process PDF thumbnail:', err);
       // Continue without thumbnail
+    } finally {
+      // Clean up PDF.js document to free memory
+      if (pdfDoc) {
+        try { await pdfDoc.destroy(); } catch (_) { /* noop */ }
+      }
     }
 
     renderFileList();
@@ -197,7 +243,7 @@ function renderFileList() {
     const pages = document.createElement('div');
     pages.className = 'file-card__pages';
     pages.textContent = entry.pageCount > 0
-      ? `${entry.pageCount} ${getCurrentLanguage() === 'fr' ? 'page(s)' : 'page(s)'}`
+      ? `${entry.pageCount} ${t('file.pages')}`
       : '...';
     info.appendChild(name);
     info.appendChild(pages);
@@ -206,18 +252,30 @@ function renderFileList() {
     const actions = document.createElement('div');
     actions.className = 'file-card__actions';
 
-    // Drag handle
+    // Drag handle — keyboard accessible reorder via arrow keys
     const handle = document.createElement('span');
     handle.className = 'file-card__drag-handle';
     handle.textContent = '⣿';
-    handle.setAttribute('aria-hidden', 'true');
+    handle.setAttribute('aria-hidden', 'false');
+    handle.setAttribute('role', 'button');
+    handle.setAttribute('tabindex', '0');
+    handle.setAttribute('aria-label', `${t('file.moveUp')} / ${t('file.moveDown')} (arrow keys)`);
+    handle.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveUp(entry.id);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveDown(entry.id);
+      }
+    });
     actions.appendChild(handle);
 
     // Move up button
     const upBtn = document.createElement('button');
     upBtn.className = 'file-card__btn';
-    upBtn.setAttribute('aria-label', t('file.moveUp') || 'Move up');
-    upBtn.title = t('file.moveUp') || 'Move up';
+    upBtn.setAttribute('aria-label', t('file.moveUp'));
+    upBtn.title = t('file.moveUp');
     upBtn.disabled = index === 0;
     upBtn.innerHTML = '↑';
     upBtn.addEventListener('click', () => moveUp(entry.id));
@@ -226,8 +284,8 @@ function renderFileList() {
     // Move down button
     const downBtn = document.createElement('button');
     downBtn.className = 'file-card__btn';
-    downBtn.setAttribute('aria-label', t('file.moveDown') || 'Move down');
-    downBtn.title = t('file.moveDown') || 'Move down';
+    downBtn.setAttribute('aria-label', t('file.moveDown'));
+    downBtn.title = t('file.moveDown');
     downBtn.disabled = index === state.files.length - 1;
     downBtn.innerHTML = '↓';
     downBtn.addEventListener('click', () => moveDown(entry.id));
@@ -236,8 +294,8 @@ function renderFileList() {
     // Remove button
     const removeBtn = document.createElement('button');
     removeBtn.className = 'file-card__btn file-card__btn--remove';
-    removeBtn.setAttribute('aria-label', t('file.remove') || 'Remove file');
-    removeBtn.title = t('file.remove') || 'Remove file';
+    removeBtn.setAttribute('aria-label', t('file.remove'));
+    removeBtn.title = t('file.remove');
     removeBtn.innerHTML = '✕';
     removeBtn.addEventListener('click', () => removeFile(entry.id));
     actions.appendChild(removeBtn);
@@ -325,6 +383,7 @@ function moveDown(id) {
 
 /**
  * Remove a file from state and re-render.
+ * Revokes any object URLs to prevent memory leaks.
  */
 function removeFile(id) {
   state.files = state.files.filter((f) => f.id !== id);
@@ -399,6 +458,7 @@ async function mergePDFs() {
 
 /**
  * Trigger browser download of the merged PDF.
+ * Ensures object URL is revoked in finally to prevent leaks.
  * @param {Uint8Array} bytes - PDF file bytes
  */
 function downloadMergedPdf(bytes) {
@@ -411,9 +471,13 @@ function downloadMergedPdf(bytes) {
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    a.click();
+  } finally {
+    document.body.removeChild(a);
+    // Revoke after a slight delay to ensure download has started
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
 }
 
 // ===== Reset =====
@@ -450,8 +514,9 @@ function showProgress(label, pct) {
   }
   if (progressLabel) progressLabel.textContent = label;
   if (progressFill) progressFill.style.width = `${pct}%`;
-  if (progressContainer) {
-    progressContainer.setAttribute('aria-valuenow', String(pct));
+  // Set aria-valuenow on the progressbar element, not the container
+  if (progressBar) {
+    progressBar.setAttribute('aria-valuenow', String(pct));
   }
 }
 
@@ -461,6 +526,9 @@ function hideProgress() {
     progressContainer.classList.remove('active');
   }
   if (progressFill) progressFill.style.width = '0%';
+  if (progressBar) {
+    progressBar.setAttribute('aria-valuenow', '0');
+  }
 }
 
 function showSuccess(msg) {
