@@ -9,23 +9,34 @@ import '../styles/main.css';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { initI18n, setLanguage, getCurrentLanguage, t } from './i18n.js';
+import { initI18n, t } from './i18n.js';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 // ===== State =====
 const state = {
-  files: [],         // Array of { id, file, name, size, pageCount, thumbnailUrl }
+  files: [], // Array of { id, file, name, size, pageCount, thumbnailUrl }
   maxFiles: 10,
   isProcessing: false,
   nextId: 1,
 };
 
 // ===== DOM refs =====
-let dropzone, fileInput, workspace, fileList, progressContainer,
-    progressBar, progressFill, progressLabel, btnMerge, btnResetAll, btnReset,
-    totalPagesCount, fileCountDisplay, srLive;
+let dropzone,
+  fileInput,
+  workspace,
+  fileList,
+  progressContainer,
+  progressBar,
+  progressFill,
+  progressLabel,
+  btnMerge,
+  btnResetAll,
+  btnReset,
+  totalPagesCount,
+  fileCountDisplay,
+  srLive;
 
 // ===== Init =====
 function init() {
@@ -127,7 +138,7 @@ async function handleFiles(fileListInput) {
     }
 
     // Check for duplicate file (same name + size)
-    const isDuplicate = state.files.some(f => f.name === file.name && f.size === file.size);
+    const isDuplicate = state.files.some((f) => f.name === file.name && f.size === file.size);
     if (isDuplicate) {
       showError(t('alerts.duplicate'));
       continue;
@@ -161,9 +172,7 @@ async function handleFiles(fileListInput) {
       // Guard against canvas size exceeding mobile Safari limits (~16.7MP)
       const maxPixels = 16700000;
       const canvasPixels = viewport.width * viewport.height;
-      const scale = canvasPixels > maxPixels
-        ? Math.sqrt(maxPixels / canvasPixels) * 0.4
-        : 0.4;
+      const scale = canvasPixels > maxPixels ? Math.sqrt(maxPixels / canvasPixels) * 0.4 : 0.4;
 
       if (scale !== 0.4) {
         const scaledViewport = page.getViewport({ scale });
@@ -187,7 +196,11 @@ async function handleFiles(fileListInput) {
     } finally {
       // Clean up PDF.js document to free memory
       if (pdfDoc) {
-        try { await pdfDoc.destroy(); } catch (_) { /* noop */ }
+        try {
+          await pdfDoc.destroy();
+        } catch (_) {
+          /* noop */
+        }
       }
     }
 
@@ -208,9 +221,8 @@ function renderFileList() {
   fileList.innerHTML = '';
 
   state.files.forEach((entry, index) => {
-    const card = document.createElement('div');
+    const card = document.createElement('li');
     card.className = 'file-card';
-    card.setAttribute('role', 'listitem');
     card.setAttribute('data-id', String(entry.id));
     card.setAttribute('draggable', 'true');
 
@@ -242,9 +254,7 @@ function renderFileList() {
     name.textContent = entry.name;
     const pages = document.createElement('div');
     pages.className = 'file-card__pages';
-    pages.textContent = entry.pageCount > 0
-      ? `${entry.pageCount} ${t('file.pages')}`
-      : '...';
+    pages.textContent = entry.pageCount > 0 ? `${entry.pageCount} ${t('file.pages')}` : '...';
     info.appendChild(name);
     info.appendChild(pages);
 
@@ -273,6 +283,7 @@ function renderFileList() {
 
     // Move up button
     const upBtn = document.createElement('button');
+    upBtn.type = 'button';
     upBtn.className = 'file-card__btn';
     upBtn.setAttribute('aria-label', t('file.moveUp'));
     upBtn.title = t('file.moveUp');
@@ -283,6 +294,7 @@ function renderFileList() {
 
     // Move down button
     const downBtn = document.createElement('button');
+    downBtn.type = 'button';
     downBtn.className = 'file-card__btn';
     downBtn.setAttribute('aria-label', t('file.moveDown'));
     downBtn.title = t('file.moveDown');
@@ -293,6 +305,7 @@ function renderFileList() {
 
     // Remove button
     const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
     removeBtn.className = 'file-card__btn file-card__btn--remove';
     removeBtn.setAttribute('aria-label', t('file.remove'));
     removeBtn.title = t('file.remove');
@@ -316,9 +329,9 @@ function renderFileList() {
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
       // Clean up any lingering drag-over classes
-      fileList.querySelectorAll('.file-card.drag-over').forEach((c) =>
-        c.classList.remove('drag-over')
-      );
+      fileList.querySelectorAll('.file-card.drag-over').forEach((c) => {
+        c.classList.remove('drag-over');
+      });
     });
 
     card.addEventListener('dragover', (e) => {
@@ -426,7 +439,9 @@ async function mergePDFs() {
       const arrayBuffer = await entry.file.arrayBuffer();
       const sourcePdf = await PDFDocument.load(arrayBuffer);
       const copiedPages = await mergedPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
+      copiedPages.forEach((page) => {
+        mergedPdf.addPage(page);
+      });
 
       // Update progress
       const pct = Math.round(((i + 1) / state.files.length) * 80);
@@ -465,7 +480,7 @@ function downloadMergedPdf(bytes) {
   const blob = new Blob([bytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  const filename = t('merge.resultName', { timestamp }) + '.pdf';
+  const filename = `${t('merge.resultName', { timestamp })}.pdf`;
 
   const a = document.createElement('a');
   a.href = url;
@@ -494,7 +509,10 @@ function resetAll() {
   hideProgress();
   // Clear any error/success banners
   const banners = document.querySelectorAll('.error-banner.active, .success-banner.active');
-  banners.forEach((b) => b.classList.remove('active'));
+  banners.forEach((b) => {
+    b.classList.remove('active');
+    b.hidden = true;
+  });
 }
 
 // ===== UI Helpers =====
@@ -532,20 +550,28 @@ function hideProgress() {
 }
 
 function showSuccess(msg) {
-  let banner = document.querySelector('.success-banner');
+  const banner = document.querySelector('.success-banner');
   if (!banner) return;
+  banner.hidden = false;
   banner.textContent = msg;
   banner.classList.add('active');
-  setTimeout(() => banner.classList.remove('active'), 4000);
+  setTimeout(() => {
+    banner.classList.remove('active');
+    banner.hidden = true;
+  }, 4000);
 }
 
 function showError(msg) {
-  let banner = document.querySelector('.error-banner');
+  const banner = document.querySelector('.error-banner');
   if (!banner) return;
+  banner.hidden = false;
   banner.textContent = msg;
   banner.classList.add('active');
   announce(msg);
-  setTimeout(() => banner.classList.remove('active'), 5000);
+  setTimeout(() => {
+    banner.classList.remove('active');
+    banner.hidden = true;
+  }, 5000);
 }
 
 /**
@@ -567,4 +593,13 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+// ===== Service Worker (PWA) =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
 }

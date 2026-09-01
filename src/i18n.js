@@ -328,7 +328,7 @@ export function setLanguage(lang, callback) {
 
   try {
     localStorage.setItem(STORAGE_KEY, lang);
-  } catch (e) {
+  } catch (_e) {
     // localStorage might be unavailable (private browsing)
   }
 
@@ -396,7 +396,7 @@ export function initI18n() {
 
   try {
     savedLang = localStorage.getItem(STORAGE_KEY) || 'en';
-  } catch (e) {
+  } catch (_e) {
     // localStorage unavailable
   }
 
