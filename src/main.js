@@ -160,9 +160,11 @@ async function handleFiles(fileListInput) {
 
     // Async: get page count and thumbnail
     let pdfDoc = null;
+    let pdfjsLoadingTask = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      pdfjsLoadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      pdfDoc = await pdfjsLoadingTask.promise;
       entry.pageCount = pdfDoc.numPages;
 
       // Generate thumbnail from page 1
@@ -195,9 +197,9 @@ async function handleFiles(fileListInput) {
       // Continue without thumbnail
     } finally {
       // Clean up PDF.js document to free memory
-      if (pdfDoc) {
+      if (pdfjsLoadingTask) {
         try {
-          await pdfDoc.destroy();
+          await pdfjsLoadingTask.destroy();
         } catch (_) {
           /* noop */
         }
